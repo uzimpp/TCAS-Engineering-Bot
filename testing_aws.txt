@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-line-signature": "..."
+  },
+  "body": "{\"destination\": \"Your user ID\", 
+  \"events\": [{\"type\": \"message\", 
+  \"message\": {\"type\": \"text\", 
+  \"id\": \"...\", 
+  \"text\": \"เริ่มต้นการใช้งาน\"}, 
+  \"webhookEventId\": \"...\", 
+  \"deliveryContext\": {\"isRedelivery\": false}, 
+  \"timestamp\": ..., \"source\": {\"type\": \"user\", 
+  \"userId\": \"Your user ID\"}, 
+  \"replyToken\": \"...\", 
+  \"mode\": \"active\"}]}"
+}
