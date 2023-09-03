@@ -27,6 +27,7 @@ university = ['CU', 'KSU', 'KU', 'KBU', 'KKU', 'CMU', 'TSU', 'KMUTT', 'KMUTNB1',
               'UP', 'MSU', 'MU', 'MJU', 'RSU', 'RTU', 'CPRU', 'BRSU', 'RU', 'WU', 'SWU', 'SPU', 'SU', 'PSU', 'SU(SiamU)', 'UTCC', 'UBU', 'KMITL']
 activated = False
 user_confirm = False
+user_errors = 0
 skipped = 0
 stage = 0
 # stage -1 = Denied , waiting for a confirmation
@@ -124,7 +125,7 @@ def handle_message(event):
                                                   QuickReplyButton(action=MessageAction(label="ปฏิเสธ", text="ปฏิเสธ"))])))
         
         ######################################
-        # accept and deny | ยืนยันและปฏิเสธ
+        # accept and deny and user errors | ยืนยัน ปฏิเสธ และ ข้อผิดพลาด
         elif (event.message.text == "ยืนยัน" and activated) :
             print("accepted")
             stage = 0
@@ -163,10 +164,18 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(
                     "หากคุณต้องการทราบข้อมูลคุณสามารถกดเมนูเริ่มต้นการใช้งานได้เลย"))
+                 
+         else: # Send a warning message and reset the error count
+            user_errors += 1
+            if user_errors >= 5 and user_errors != 0:
+                line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage('หากคุณต้องการความช่วยเหลือสามารถกดเมนูวิธีการใช้งานหรือพิมพ์"วิธีการใช้งาน"ได้ในเบื้องต้น'))
+                user_errors = 0
 
         ######################################
         # check major | ตรวจสอบสาขาที่มีอยู่
-        elif event.message.text.upper() in university and user_confirm and stage == 0:
+        if event.message.text.upper() in university and user_confirm and stage == 0:
             selected_uni = event.message.text.upper()
             user_errors = 0
             stage = 1
