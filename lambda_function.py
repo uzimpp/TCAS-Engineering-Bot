@@ -221,7 +221,7 @@ def handle_message(event):
             check_curriculum(event)
         
         
-        elif (not event.message.text.isdigit() and stage == 2 and stage != 7 and skipped != 1 and len(major_list) > 1 ) or (not(1 <= input_value <= len(major_list)) and stage == 2 and stage != 4 and skipped != 1 and len(major_list) > 1):
+        elif not(1 <= input_value <= len(major_list)) and stage == 2 and stage != 7 and skipped != 1 and len(major_list) > 1:
             print("check curriculum = error")
             line_bot_api.reply_message(
                 event.reply_token,
@@ -255,7 +255,7 @@ def handle_message(event):
             stage = 7
             check_round(event)
 
-        elif (not event.message.text.isdigit() and not(1 <= input_value <= 4)) and stage == 6 and skipped != 1 and len(req_list) > 1:
+        elif not(1 <= input_value <= 4) and stage == 6 and skipped != 1 and len(req_list) > 1:
             print("check round = error")
             line_bot_api.push_message(
             event.source.user_id,
