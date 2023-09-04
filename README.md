@@ -1,7 +1,7 @@
 
 # TCAS Engineering-Bot
-Senior project in Satitkaset school
-This chatbot is able to reply only one department which is engineering.
+This chatbot is the project called "Senior project" in my highschool.
+It is able to reply only one department which is engineering.
 Any further reponse such as reponding to more than one major need a huge code modification.
 - Try it out!
 with this ID Line : @334vkcsr or Scan this QR code!
