@@ -178,7 +178,9 @@ def handle_message(event):
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
-                    'หากคุณต้องการความช่วยเหลือสามารถกดเมนูวิธีการใช้งานหรือพิมพ์"วิธีการใช้งาน"ได้ในเบื้องต้น'))
+                    'หากคุณต้องการความช่วยเหลือสามารถกดเมนูวิธีการใช้งานหรือกดปุ่ม"วิธีการใช้งาน"ได้ด้านล่าง',
+                            quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
+                                label="วิธีการใช้งาน", text="วิธีการใช้งาน"))])))
 
         ######################################
         # check major | ตรวจสอบสาขาที่มีอยู่
@@ -199,12 +201,14 @@ def handle_message(event):
                     "ขออภัย ไม่พบมหาวิทยาลัยที่คุณต้องการกรุณาพิมพ์มหาวิทยาลัยที่คุณต้องการทราบข้อมูลของคณะวิศวกรรมศาสตร์ใหม่อีกครั้ง"))
         
         ######################################
-        # check curriculum | ตรวจสอบหลักสูตรที่มีอยู่
+        # checking if message is int or not | ตรวจสอบข้อความว่าเป็นตัวเลขหรือไม่ เนื่องจาก event.message.text ที่เข้ามาเป็น str ในตอนแรกจคงต้องมีการเชคก่อนเปลี่ยนแปลงค่าไม่งั้นจะเกิด error
         try:
             input_value = int(event.message.text)
         except ValueError:
             pass
-            
+
+        ######################################
+        # check curriculum | ตรวจสอบหลักสูตรที่มีอยู่
         if ((event.message.text.isdigit() and 1 <= input_value <= len(major_list)) and stage == 2 and skipped != 1) or (event.message.text == "หลักสูตร" and stage == 7):
             if event.message.text != "หลักสูตร" :
                 selected_major = major_list[int(event.message.text)-1]
@@ -212,6 +216,7 @@ def handle_message(event):
             user_errors = 0
             stage = 3
             check_curriculum(event)
+        
         
         elif (not event.message.text.isdigit() and stage == 2 and stage != 7 and skipped != 1 and len(major_list) > 1 ) or (not(1 <= input_value <= len(major_list)) and stage == 2 and stage != 4 and skipped != 1 and len(major_list) > 1):
             print("check curriculum = error")
@@ -266,7 +271,6 @@ def handle_message(event):
     elif isinstance(event.message, StickerMessage):
         send_stickers(event)
         
-
     ########################################################################################################################################################
     # reply images from user | ตอบกลับรูปภาพจาก user
     elif isinstance(event.message, ImageMessage):
