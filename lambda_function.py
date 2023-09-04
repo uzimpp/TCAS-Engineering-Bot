@@ -1,5 +1,4 @@
 import random
-import re
 import json
 import base64
 import hashlib
@@ -9,6 +8,8 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageMessage, ImageSendMessage ,StickerMessage, StickerSendMessage , QuickReply, QuickReplyButton, MessageAction, AudioMessage
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import re
+
 
 
 # Line Bot Config
@@ -21,27 +22,49 @@ scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_name("creds.json", scope)
 client = gspread.authorize(creds)
 
-# Setting
+# Variables Config
 university = ['CU', 'KSU', 'KU', 'KBU', 'KKU', 'CMU', 'TSU', 'KMUTT', 'KMUTNB1', 'KMUTNB2', 'MUT', 'RMUTK', 'RMUTTO1', 'RMUTTO2',
               'RMUTT', 'RMUTP', 'RMUTR', 'RMUTL', 'RMUTSV1', 'RMUTSV2', 'RMUTI', 'SUT', 'TU', 'DPU', 'NPU', 'PNU', 'NU', 'BUU',
               'UP', 'MSU', 'MU', 'MJU', 'RSU', 'RTU', 'CPRU', 'BRSU', 'RU', 'WU', 'SWU', 'SPU', 'SU', 'PSU', 'SU(SiamU)', 'UTCC', 'UBU', 'KMITL']
 activated = False
 user_confirm = False
-user_errors = 0
-skipped = 0
+
 stage = 0
+selected_uni = ''
+worksheet = ''
+data = []
+major_list = []
+selected_major = ''
+curriculum_list = []
+selected_curriculum = ''
+req_list = []
+req_list_row = []
+selected_round = ''
+skipped = 0
+user_errors = 0
+input_value = 0
+
+images = [
+    ImageSendMessage(original_content_url='https://i.imgur.com/e6lCWxn.png', preview_image_url='https://i.imgur.com/e6lCWxn.png'), #image_url_guide1
+    ImageSendMessage(original_content_url='https://i.imgur.com/iWsILuw.png', preview_image_url='https://i.imgur.com/iWsILuw.png'), #image_url_guide2
+    ImageSendMessage(original_content_url='https://i.imgur.com/lWDrwqh.png', preview_image_url='https://i.imgur.com/lWDrwqh.png') #image_url_uni
+]
+reporting_form = "https://forms.gle/Vz1sL4wDMF4znxBa9"
+
 # stage -1 = Denied , waiting for a confirmation
 # stage 0 = Idle
 # stage 1 = check_major
-# stage 2 = check_curriculum
-# stage 3 = check_req
-# stage 4 = check_round
-image_url_full = 'https://i.imgur.com/MoMWaTJ.png'
-image_url_guide1 = 'https://i.imgur.com/e6lCWxn.png'
-image_url_guide2 = 'https://i.imgur.com/iWsILuw.png'
-image_url_uni = 'https://i.imgur.com/lWDrwqh.png'
+# stage 3 = check_curriculum
+# stage 5 = check_req
+# stage 7 = check_round
+
+#image_url_full = 'https://i.imgur.com/MoMWaTJ.png'
+#image_url_guide1 = 'https://i.imgur.com/e6lCWxn.png'
+#image_url_guide2 = 'https://i.imgur.com/iWsILuw.png'
+#image_url_uni = 'https://i.imgur.com/lWDrwqh.png'
 
 
+# Lambda Config
 def lambda_handler(event, context):
     signature = event['headers']['x-line-signature']
     body = event['body']
@@ -57,23 +80,15 @@ def lambda_handler(event, context):
 # Handle messages and sort type of the message
 @handler.add(MessageEvent, message=(TextMessage, ImageMessage, StickerMessage))
 def handle_message(event):
-    global user_errors, stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
+    global user_errors, stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round, input_value
     ########################################################################################################################################################
     if isinstance(event.message, TextMessage):
         ############################################################################
         # guide | วิธีการใช้งาน //
         if event.message.text == 'วิธีการใช้งาน':  ###########
             print("guide")
-            line_bot_api.push_message(
-                event.source.user_id,
-                ImageSendMessage(original_content_url=image_url_guide1,preview_image_url=image_url_guide1))
-            line_bot_api.push_message(
-                event.source.user_id,
-                ImageSendMessage(original_content_url=image_url_guide2,preview_image_url=image_url_guide2))
-            line_bot_api.push_message(
-                event.source.user_id,
-                ImageSendMessage(original_content_url=image_url_uni,preview_image_url=image_url_uni))
-        
+            line_bot_api.push_message(event.source.user_id, images)
+
         ############################################################################
         # website | เว็บไซต์ //
         elif event.message.text == 'เว็บไซต์':  ###########
@@ -88,10 +103,10 @@ def handle_message(event):
             print("reporting")
             line_bot_api.push_message(
                 event.source.user_id,
-                TextSendMessage("https://forms.gle/Vz1sL4wDMF4znxBa9"))
+                TextSendMessage(reporting_form))
         
         ############################################################################
-        # other | อื่นๆ //
+        # the other | อื่นๆ //
         elif event.message.text == 'อื่นๆ':  ###########
             print("other")
             line_bot_api.push_message(
@@ -101,92 +116,78 @@ def handle_message(event):
         ############################################################################
         # activated Chatbot | เริ่มต้นการใช้งาน
         elif event.message.text == 'เริ่มต้นการใช้งาน':  ###########
-            user_confirm = False
-            selected_uni = ''
-            worksheet = ''
-            data = []
-            major_list = []
-            selected_major = ''
-            curriculum_list = []
-            selected_curriculum = ''
-            req_list = []
-            req_list_row = []
-            selected_round = ''
-            user_errors = 0
-            skipped = 0
-            stage = 0
             activated = True
-            print("activated Chatbot")
+            user_confirm = False
+            stage = 0
+            
+            reset_variables()
+            print("activated Chatbot")            
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
                     'คุณต้องการทราบข้อมูลของ TCAS คณะวิศวกรรมศาสตร์ใช่หรือไม่\nถ้าใช่โปรดกดปุ่ม "ยืนยัน" ถ้าไม่ใช่โปรดกดปุ่ม "ปฏิเสธ"',
                     quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(label="ยืนยัน", text="ยืนยัน")),
                                                   QuickReplyButton(action=MessageAction(label="ปฏิเสธ", text="ปฏิเสธ"))])))
-        
+                
         ######################################
-        # accept and deny and user errors | ยืนยัน ปฏิเสธ และ ข้อผิดพลาด
+        # accept and deny | ยืนยันและปฏิเสธ
         elif (event.message.text == "ยืนยัน" and activated) :
-            print("accepted")
-            stage = 0
-            selected_uni = ''
-            worksheet = ''
-            data = []
-            major_list = []
-            selected_major = ''
-            curriculum_list = []
-            selected_curriculum = ''
-            req_list = []
-            req_list_row = []
-            selected_round = ''
+            event.message.text = ""
             user_confirm = True
-            activated = False
-            user_errors = 0
-            skipped = 0
+            stage = 0
+
+            reset_variables()
+            print("accepted")            
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
                     "กรุณาพิมพ์มหาวิทยาลัยที่คุณต้องการทราบข้อมูล"))
             line_bot_api.push_message(
-                event.source.user_id,
-                ImageSendMessage(original_content_url=image_url_guide2,preview_image_url=image_url_guide2))
+                event.source.user_id, images[1])
             line_bot_api.push_message(
-                event.source.user_id,
-                ImageSendMessage(original_content_url=image_url_uni,preview_image_url=image_url_uni))
-            event.message.text = ""
+                event.source.user_id, images[2])
+            
 
         elif (event.message.text == "ปฏิเสธ" or event.message.text == "ไม่ต้องการ") and (activated or stage == 4):
-            print("denied")
-            user_errors = 0
-            stage = -1
+            event.message.text = ""
             user_confirm = False
+            stage = -1
+            
+            reset_variables()
+            
+            print("denied")
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
                     "หากคุณต้องการทราบข้อมูลคุณสามารถกดเมนูเริ่มต้นการใช้งานได้เลย"))
-                 
-         else: # Send a warning message and reset the error count
-            user_errors += 1
-            if user_errors >= 5 and user_errors != 0:
-                line_bot_api.reply_message(
+        
+        ######################################
+        else:
+            if not(activated and user_confirm) :
+                user_errors += 1
+                print('user_errors',user_errors)
+            pass
+            
+        if (user_errors % 5) == 0 and user_errors != 0: # Send a warning message and reset the error count
+            user_errors = 0
+            print('user_errors = warning')
+            line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage('หากคุณต้องการความช่วยเหลือสามารถกดเมนูวิธีการใช้งานหรือพิมพ์"วิธีการใช้งาน"ได้ในเบื้องต้น'))
-                user_errors = 0
+                TextSendMessage(
+                    'หากคุณต้องการความช่วยเหลือสามารถกดเมนูวิธีการใช้งานหรือพิมพ์"วิธีการใช้งาน"ได้ในเบื้องต้น'))
 
         ######################################
         # check major | ตรวจสอบสาขาที่มีอยู่
-        if event.message.text.upper() in university and user_confirm and stage == 0:
-            selected_uni = event.message.text.upper()
+        if (event.message.text.upper() in university and user_confirm and stage == 0) or (event.message.text == "สาขา" and user_confirm and stage == 7):
+            if event.message.text != "สาขา" :
+                selected_uni = event.message.text.upper()
+            input_value = 0
+            user_confirm = False
             user_errors = 0
             stage = 1
             check_major(event)
 
-        elif event.message.text == "สาขา" and user_confirm and stage == 4:
-            user_errors = 0
-            stage = 1
-            check_major(event)
-
-        elif (event.message.text not in university or gspread.exceptions.APIError) and user_confirm and stage == 0:
+        elif (event.message.text not in university and stage == 0 and user_confirm) or (isinstance(event.message.text, gspread.exceptions.APIError) and stage == 0 and user_confirm):
             print("check major = error")
             line_bot_api.reply_message(
                 event.reply_token,
@@ -195,18 +196,20 @@ def handle_message(event):
         
         ######################################
         # check curriculum | ตรวจสอบหลักสูตรที่มีอยู่
-        elif (event.message.text.isdigit() and 1 <= int(event.message.text) <= len(major_list)) and stage == 1 and skipped != 1:
-            selected_major = major_list[int(event.message.text)-1]
+        try:
+            input_value = int(event.message.text)
+        except ValueError:
+            pass
+            
+        if ((event.message.text.isdigit() and 1 <= input_value <= len(major_list)) and stage == 2 and skipped != 1) or (event.message.text == "หลักสูตร" and stage == 7):
+            if event.message.text != "หลักสูตร" :
+                selected_major = major_list[int(event.message.text)-1]
+            input_value = 0
             user_errors = 0
-            stage = 2
+            stage = 3
             check_curriculum(event)
-
-        elif event.message.text == "หลักสูตร" and stage == 4:
-            user_errors = 0
-            stage = 2
-            check_curriculum(event)
-
-        elif (not event.message.text.isdigit() or not(1 <= int(event.message.text) <= len(major_list))) and stage == 1 and stage != 4 and skipped != 1 and len(major_list) > 1:
+        
+        elif (not event.message.text.isdigit() and stage == 2 and stage != 7 and skipped != 1 and len(major_list) > 1 ) or (not(1 <= input_value <= len(major_list)) and stage == 2 and stage != 4 and skipped != 1 and len(major_list) > 1):
             print("check curriculum = error")
             line_bot_api.reply_message(
                 event.reply_token,
@@ -215,18 +218,16 @@ def handle_message(event):
         
         ######################################
         # check req | ตรวจสอบเกณฑ์ในการรับสมัคร
-        elif (event.message.text.isdigit() and 1 <= int(event.message.text) <= len(curriculum_list)) and stage == 2 and skipped != 1:
-            selected_curriculum = curriculum_list[int(event.message.text)-1]
+        elif ((event.message.text.isdigit() and 1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1) or (event.message.text == "รอบ" and stage == 7):
+            if event.message.text != "รอบ" :    
+                selected_curriculum = curriculum_list[int(event.message.text)-1]
+            input_value = 0
             user_errors = 0
-            stage = 3
+            stage = 5
             check_req(event)
 
-        elif event.message.text == "รอบ" and stage == 4:
-            user_errors = 0
-            stage = 3
-            check_req(event)
 
-        elif (not event.message.text.isdigit() or not(1 <= int(event.message.text) <= len(curriculum_list))) and stage == 2 and skipped != 1 and len(curriculum_list) > 1:
+        elif (not event.message.text.isdigit() and stage == 4 and skipped != 1 and len(curriculum_list) > 1) or (not(1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1 and len(curriculum_list) > 1):
             print("check req = error")
             line_bot_api.reply_message(
                 event.reply_token,
@@ -235,67 +236,32 @@ def handle_message(event):
         
         ######################################
         # check round | ตรวจสอบรอบ
-        elif (event.message.text.isdigit() and 1 <= int(event.message.text) <= 4) and stage == 3:
+        elif (event.message.text.isdigit() and 1 <= input_value <= 4) and stage == 6:
             selected_round = req_list[int(event.message.text)-1]
+            input_value = 0
             user_errors = 0
-            stage = 4
-            req_url = set([data[row - 1][3] for row in req_list_row])
-            req_url = next(iter(req_url))
-            print("check round" ,selected_round, req_url)
-            messages = selected_round + "\n" + \
-                "ศึกษาเพิ่มเติมได้ที่นี่" + "\n" + req_url
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(messages))
-            line_bot_api.push_message(
-                event.source.user_id,
-                TextSendMessage("คุณต้องการทราบข้อมูลส่วนใดใหม่หรือไม่?",
-                                quick_reply=QuickReply(items=[
-                                    QuickReplyButton(action=MessageAction(
-                                        label="สาขา", text="สาขา")),
-                                    QuickReplyButton(action=MessageAction(
-                                        label="หลักสูตร", text="หลักสูตร")),
-                                    QuickReplyButton(action=MessageAction(
-                                        label="รอบ", text="รอบ")),
-                                    QuickReplyButton(action=MessageAction(
-                                        label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
+            stage = 7
+            check_round(event)
 
-        elif (not event.message.text.isdigit() and not(1 <= int(event.message.text) <= 4)) and stage == 3 and skipped != 1 and len(req_list) > 1:
+        elif (not event.message.text.isdigit() and not(1 <= input_value <= 4)) and stage == 6 and skipped != 1 and len(req_list) > 1:
             print("check round = error")
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    "ขออภัย กรุณาเลือกเกณฑ์การรับสมัครในรอบที่คุณสนใจ\nด้วยการพิมพ์ตัวเลข 1 - 4 โดยไม่ต้องมีจุด"))
-        ######################################
-        else:
-            user_errors += 1
-            print("user_erros", user_errors)
-        
+            line_bot_api.push_message(
+            event.source.user_id,
+            TextSendMessage("ขออภัย กรุณาเลือกเกณฑ์การรับสมัครในรอบที่คุณสนใจ",
+                            quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
+                                label="รอบ 1", text="1")),
+                                QuickReplyButton(action=MessageAction(
+                                    label="รอบ 2", text="2")),
+                                QuickReplyButton(action=MessageAction(
+                                    label="รอบ 3", text="3")),
+                                QuickReplyButton(action=MessageAction(
+                                    label="รอบ 4", text="4"))])))
+                    
     ########################################################################################################################################################
     # reply stickers from users | ตอบกลับ sticker จาก user
     elif isinstance(event.message, StickerMessage):
-        sticker_list = [
-            {
-                "package_id": "789",
-                "sticker_id": "10877"
-            },
-            {
-                "package_id": "789",
-                "sticker_id": "10882"
-            },
-            {
-                "package_id": "446",
-                "sticker_id": "1993"
-            },
-            {
-                "package_id": "1070",
-                "sticker_id": "17866"
-            }]
-        random_sticker = random.choice(sticker_list)
-        # send sticker randomly | ส่งสติกเกอร์แบบแรนดอม
-        print("reply with a sticker")
-        line_bot_api.reply_message(event.reply_token, StickerSendMessage(
-            package_id=random_sticker['package_id'], sticker_id=random_sticker['sticker_id']))
+        send_stickers(event)
+        
 
     ########################################################################################################################################################
     # reply images from user | ตอบกลับรูปภาพจาก user
@@ -304,19 +270,13 @@ def handle_message(event):
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage("ขอบคุณสำหรับไฟล์รูปภาพ <3\nหากคุณต้องการเริ่มต้นใช้งานให้คุณกดเมนูเริ่มต้นการใช้งานได้เลย"))
-            
+    
     ########################################################################################################################################################
-    # errors warning
-    elif ((int(user_errors) % 5) == 0) and int(user_errors) > 1:
-        print(user_errors)
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage('หากคุณต้องการความช่วยเหลือสามารถกดเมนูวิธีการใช้งานหรือพิมพ์"วิธีการใช้งาน"ได้ในเบื้องต้น'))
-        
-    ########################################################################################################################################################
+
 
 def check_major(event):
     global stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
+    input_value = 0
     skipped = 0
     worksheet = client.open('sn-all-engineer').worksheet(selected_uni)
     data = worksheet.get_all_values()
@@ -330,20 +290,21 @@ def check_major(event):
             TextSendMessage(
                 messages))
         selected_major = major_list[0]
-        stage = 2
+        stage = 3
         skipped = 1
         print("skipped to check_curriculum", selected_major)
         check_curriculum(event)
     else:
+        stage = 2
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(
                 "กรุณาเลือกสาขาจากข้างล่างนี้ด้วยการพิมพ์ต้วเลขด้านหน้าโดยไม่ต้องมีจุด\n" + "\n".join(major_list)))
     print("check_major",selected_uni,"\n", major_list)
 
-
 def check_curriculum(event):
     global stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
+    input_value = 0
     skipped = 0
     # หา row ที่มี major นั้นๆเพื่อนำ row ดังกล่าวไปหาต่อใน column C แล้วเก็บ เป็น list ที่เป็น set เพื่อไม่ให้ซ้ำ
     curriculum_list_row = [i+1 for i,
@@ -362,10 +323,12 @@ def check_curriculum(event):
             TextSendMessage(
                 messages))
         selected_curriculum = curriculum_list[0]
+        stage = 5
         skipped = 1
         print("skipped to check_req", selected_curriculum)
         check_req(event)
     else:
+        stage = 4
         line_bot_api.push_message(
             event.source.user_id, TextSendMessage(
                 "กรุณาเลือกหลักสูตรข้างล่างนี้\n" +
@@ -374,11 +337,10 @@ def check_curriculum(event):
                     label="หลักสูตรที่ "+str(i+1), text=i+1)) for i in range(len(curriculum_list))])))
     print("check_curriculum",selected_major,"\n",curriculum_list)
 
-
 def check_req(event):
     global stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
+    input_value = 0
     skipped = 0
-    stage = 3
     req_list_row = [i+1 for i,
                     row in enumerate(data) if row[2] == selected_curriculum]
     req_list = [data[row - 1][4] for row in req_list_row]
@@ -392,7 +354,7 @@ def check_req(event):
         req_list = req_list[1:] # most of the time there is '' in the first value of the list which possibly causes errors
     req_list = [re.sub(r"(รอบ)(\d)", rf"รอบที่ \2 ", element.replace("\n", "คือ\nรอบ ", 1)) for element in req_list]
     if req_list == ['']:
-        stage = 4
+        stage = 7
         line_bot_api.push_message(
             event.source.user_id,
             TextSendMessage("ขออภัย ไม่พบข้อมูลการเปิดรับสมัครในหลักสูตรดังกล่าว\nหากคุณต้องการทราบข้อมูลให้คุณเลือกข้อมูลที่ต้องการทราบใหม่ได้เลย",
@@ -403,6 +365,7 @@ def check_req(event):
                                     label="หลักสูตร", text="หลักสูตร"))])))
         print("no req is found , let the user choose again")
     else:
+        stage = 6
         line_bot_api.push_message(
             event.source.user_id,
             TextSendMessage('คุณต้องการทราบข้อมูลในรอบใด?',
@@ -415,3 +378,69 @@ def check_req(event):
                                 QuickReplyButton(action=MessageAction(
                                     label="รอบ 4", text="4"))])))
     print("check_req", selected_curriculum,"\n",req_list)
+
+def check_round(event):
+    global stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
+    input_value = 0
+    req_url = set([data[row - 1][3] for row in req_list_row])
+    req_url = next(iter(req_url))
+    print("check round" ,selected_round, req_url)
+    messages = selected_round + "\n" + \
+                "ศึกษาเพิ่มเติมได้ที่นี่" + "\n" + req_url
+    line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(messages))
+    line_bot_api.push_message(
+                event.source.user_id,
+                TextSendMessage("คุณต้องการทราบข้อมูลส่วนใดใหม่หรือไม่?",
+                                quick_reply=QuickReply(items=[
+                                    QuickReplyButton(action=MessageAction(
+                                        label="สาขา", text="สาขา")),
+                                    QuickReplyButton(action=MessageAction(
+                                        label="หลักสูตร", text="หลักสูตร")),
+                                    QuickReplyButton(action=MessageAction(
+                                        label="รอบ", text="รอบ")),
+                                    QuickReplyButton(action=MessageAction(
+                                        label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
+
+
+def send_stickers(event):
+    sticker_list = [
+            {
+                "package_id": "789",
+                "sticker_id": "10877"
+            },
+            {
+                "package_id": "789",
+                "sticker_id": "10882"
+            },
+            {
+                "package_id": "446",
+                "sticker_id": "1993"
+            },
+            {
+                "package_id": "1070",
+                "sticker_id": "17866"
+            }]
+    random_sticker = random.choice(sticker_list)
+    # send sticker randomly | ส่งสติกเกอร์แบบแรนดอม
+    print("reply with a sticker")
+    line_bot_api.reply_message(event.reply_token, StickerSendMessage(
+            package_id=random_sticker['package_id'], sticker_id=random_sticker['sticker_id']))
+
+
+def reset_variables():
+    global selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round, user_errors, stage, user_confirm, skipped, input_value
+    selected_uni = ''
+    worksheet = ''
+    data = []
+    major_list = []
+    selected_major = ''
+    curriculum_list = []
+    selected_curriculum = ''
+    req_list = []
+    req_list_row = []
+    selected_round = ''
+    skipped = 0
+    user_errors = 0
+    input_value = 0
