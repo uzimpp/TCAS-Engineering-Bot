@@ -23,12 +23,34 @@ creds = ServiceAccountCredentials.from_json_keyfile_name("creds.json", scope)
 client = gspread.authorize(creds)
 
 # Variables Config
+
+# stage -1 = denied , waiting for a confirmation
+# stage 0 = idle
+# stage 1 = check_major
+# stage 2 = processing check_major
+# stage 3 = check_curriculum
+# stage 4 = processing check_curriculum
+# stage 5 = check_req
+# stage 6 = processing check_req
+# stage 7 = check_round , processing check_round
+
+#image_url_full = 'https://i.imgur.com/MoMWaTJ.png'
+#image_url_guide1 = 'https://i.imgur.com/e6lCWxn.png'
+#image_url_guide2 = 'https://i.imgur.com/iWsILuw.png'
+#image_url_uni = 'https://i.imgur.com/lWDrwqh.png'
+
+images = [
+    ImageSendMessage(original_content_url='https://i.imgur.com/e6lCWxn.png', preview_image_url='https://i.imgur.com/e6lCWxn.png'), #image_url_guide1
+    ImageSendMessage(original_content_url='https://i.imgur.com/iWsILuw.png', preview_image_url='https://i.imgur.com/iWsILuw.png'), #image_url_guide2
+    ImageSendMessage(original_content_url='https://i.imgur.com/lWDrwqh.png', preview_image_url='https://i.imgur.com/lWDrwqh.png') #image_url_uni
+]
+reporting_form = "https://forms.gle/Vz1sL4wDMF4znxBa9"
+
 university = ['CU', 'KSU', 'KU', 'KBU', 'KKU', 'CMU', 'TSU', 'KMUTT', 'KMUTNB1', 'KMUTNB2', 'MUT', 'RMUTK', 'RMUTTO1', 'RMUTTO2',
               'RMUTT', 'RMUTP', 'RMUTR', 'RMUTL', 'RMUTSV1', 'RMUTSV2', 'RMUTI', 'SUT', 'TU', 'DPU', 'NPU', 'PNU', 'NU', 'BUU',
               'UP', 'MSU', 'MU', 'MJU', 'RSU', 'RTU', 'CPRU', 'BRSU', 'RU', 'WU', 'SWU', 'SPU', 'SU', 'PSU', 'SU(SiamU)', 'UTCC', 'UBU', 'KMITL']
 activated = False
 user_confirm = False
-
 stage = 0
 selected_uni = ''
 worksheet = ''
@@ -43,25 +65,6 @@ selected_round = ''
 skipped = 0
 user_errors = 0
 input_value = 0
-
-images = [
-    ImageSendMessage(original_content_url='https://i.imgur.com/e6lCWxn.png', preview_image_url='https://i.imgur.com/e6lCWxn.png'), #image_url_guide1
-    ImageSendMessage(original_content_url='https://i.imgur.com/iWsILuw.png', preview_image_url='https://i.imgur.com/iWsILuw.png'), #image_url_guide2
-    ImageSendMessage(original_content_url='https://i.imgur.com/lWDrwqh.png', preview_image_url='https://i.imgur.com/lWDrwqh.png') #image_url_uni
-]
-reporting_form = "https://forms.gle/Vz1sL4wDMF4znxBa9"
-
-# stage -1 = Denied , waiting for a confirmation
-# stage 0 = Idle
-# stage 1 = check_major
-# stage 3 = check_curriculum
-# stage 5 = check_req
-# stage 7 = check_round
-
-#image_url_full = 'https://i.imgur.com/MoMWaTJ.png'
-#image_url_guide1 = 'https://i.imgur.com/e6lCWxn.png'
-#image_url_guide2 = 'https://i.imgur.com/iWsILuw.png'
-#image_url_uni = 'https://i.imgur.com/lWDrwqh.png'
 
 
 # Lambda Config
@@ -162,6 +165,7 @@ def handle_message(event):
                     "หากคุณต้องการทราบข้อมูลคุณสามารถกดเมนูเริ่มต้นการใช้งานได้เลย"))
         
         ######################################
+        # user warning | เตือนผู้ใช้งานเมื่อมีการพิมพ์ผิดอย่างต่อเนื่องทุกๆ 5 ครั้ง
         else:
             if not(activated and user_confirm) :
                 user_errors += 1
