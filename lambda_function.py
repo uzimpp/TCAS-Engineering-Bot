@@ -16,14 +16,15 @@ import re
 line_bot_api = LineBotApi('*Channel access token*') #Channel access token
 handler = WebhookHandler('*Channel secret*') #Channel secret
 
+
 # Google Sheet Config
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
          "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name("creds.json", scope)
 client = gspread.authorize(creds)
 
-# Variables Config
 
+## Variables Config
 # stage -1 = denied , waiting for a confirmation
 # stage 0 = idle
 # stage 1 = check_major
@@ -45,7 +46,6 @@ images = [
     ImageSendMessage(original_content_url='https://i.imgur.com/lWDrwqh.png', preview_image_url='https://i.imgur.com/lWDrwqh.png') #image_url_uni
 ]
 reporting_form = "https://forms.gle/Vz1sL4wDMF4znxBa9"
-
 university = ['CU', 'KSU', 'KU', 'KBU', 'KKU', 'CMU', 'TSU', 'KMUTT', 'KMUTNB1', 'KMUTNB2', 'MUT', 'RMUTK', 'RMUTTO1', 'RMUTTO2',
               'RMUTT', 'RMUTP', 'RMUTR', 'RMUTL', 'RMUTSV1', 'RMUTSV2', 'RMUTI', 'SUT', 'TU', 'DPU', 'NPU', 'PNU', 'NU', 'BUU',
               'UP', 'MSU', 'MU', 'MJU', 'RSU', 'RTU', 'CPRU', 'BRSU', 'RU', 'WU', 'SWU', 'SPU', 'SU', 'PSU', 'SU(SiamU)', 'UTCC', 'UBU', 'KMITL']
@@ -179,8 +179,11 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(
                     'หากคุณต้องการความช่วยเหลือสามารถกดเมนูวิธีการใช้งานหรือกดปุ่ม"วิธีการใช้งาน"ได้ด้านล่าง',
-                            quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
-                                label="วิธีการใช้งาน", text="วิธีการใช้งาน"))])))
+                        quick_reply=QuickReply(items=[
+                            QuickReplyButton(action=MessageAction(
+                                label="วิธีการใช้งาน", text="วิธีการใช้งาน")),
+                            QuickReplyButton(action=MessageAction(
+                                label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
 
         ######################################
         # check major | ตรวจสอบสาขาที่มีอยู่
@@ -227,7 +230,7 @@ def handle_message(event):
         
         ######################################
         # check req | ตรวจสอบเกณฑ์ในการรับสมัคร
-        elif ((event.message.text.isdigit() and 1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1) or (event.message.text == "รอบ" and stage == 7):
+        elif ((1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1) or (event.message.text == "รอบ" and stage == 7):
             if event.message.text != "รอบ" :    
                 selected_curriculum = curriculum_list[int(event.message.text)-1]
             input_value = 0
@@ -236,7 +239,7 @@ def handle_message(event):
             check_req(event)
 
 
-        elif (not event.message.text.isdigit() and stage == 4 and skipped != 1 and len(curriculum_list) > 1) or (not(1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1 and len(curriculum_list) > 1):
+        elif not(1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1 and len(curriculum_list) > 1:
             print("check req = error")
             line_bot_api.reply_message(
                 event.reply_token,
@@ -370,7 +373,9 @@ def check_req(event):
                                 QuickReplyButton(action=MessageAction(
                                     label="สาขา", text="สาขา")),
                                 QuickReplyButton(action=MessageAction(
-                                    label="หลักสูตร", text="หลักสูตร"))])))
+                                    label="หลักสูตร", text="หลักสูตร")),
+                                QuickReplyButton(action=MessageAction(
+                                    label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
         print("no req is found , let the user choose again")
     else:
         stage = 6
