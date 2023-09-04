@@ -11,7 +11,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import re
 
 
-
 # Line Bot Config
 line_bot_api = LineBotApi('*Channel access token*') #Channel access token
 handler = WebhookHandler('*Channel secret*') #Channel secret
