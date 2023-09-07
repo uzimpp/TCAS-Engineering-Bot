@@ -16,15 +16,14 @@ import re
 line_bot_api = LineBotApi('*Channel access token*') #Channel access token
 handler = WebhookHandler('*Channel secret*') #Channel secret
 
-
 # Google Sheet Config
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
          "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name("creds.json", scope)
 client = gspread.authorize(creds)
 
+# Variables Config
 
-## Variables Config
 # stage -1 = denied , waiting for a confirmation
 # stage 0 = idle
 # stage 1 = check_major
@@ -46,6 +45,7 @@ images = [
     ImageSendMessage(original_content_url='https://i.imgur.com/lWDrwqh.png', preview_image_url='https://i.imgur.com/lWDrwqh.png') #image_url_uni
 ]
 reporting_form = "https://forms.gle/Vz1sL4wDMF4znxBa9"
+
 university = ['CU', 'KSU', 'KU', 'KBU', 'KKU', 'CMU', 'TSU', 'KMUTT', 'KMUTNB1', 'KMUTNB2', 'MUT', 'RMUTK', 'RMUTTO1', 'RMUTTO2',
               'RMUTT', 'RMUTP', 'RMUTR', 'RMUTL', 'RMUTSV1', 'RMUTSV2', 'RMUTI', 'SUT', 'TU', 'DPU', 'NPU', 'PNU', 'NU', 'BUU',
               'UP', 'MSU', 'MU', 'MJU', 'RSU', 'RTU', 'CPRU', 'BRSU', 'RU', 'WU', 'SWU', 'SPU', 'SU', 'PSU', 'SU(SiamU)', 'UTCC', 'UBU', 'KMITL']
@@ -119,6 +119,7 @@ def handle_message(event):
         ############################################################################
         # activated Chatbot | เริ่มต้นการใช้งาน
         elif event.message.text == 'เริ่มต้นการใช้งาน':  ###########
+            event.message.text = ""
             activated = True
             user_confirm = False
             stage = 0
@@ -187,7 +188,7 @@ def handle_message(event):
 
         ######################################
         # check major | ตรวจสอบสาขาที่มีอยู่
-        if (event.message.text.upper() in university and user_confirm and stage == 0) or (event.message.text == "สาขา" and user_confirm and stage == 7):
+        if (event.message.text.upper() in university and user_confirm and stage == 0) or (event.message.text == "สาขา" and stage == 7):
             if event.message.text != "สาขา" :
                 selected_uni = event.message.text.upper()
             input_value = 0
@@ -395,6 +396,7 @@ def check_req(event):
 def check_round(event):
     global stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
     input_value = 0
+    stage = 7
     req_url = set([data[row - 1][3] for row in req_list_row])
     req_url = next(iter(req_url))
     print("check round" ,selected_round, req_url)
