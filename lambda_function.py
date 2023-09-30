@@ -374,8 +374,6 @@ def check_req(event):
                                 QuickReplyButton(action=MessageAction(
                                     label="สาขา", text="สาขา")),
                                 QuickReplyButton(action=MessageAction(
-                                    label="หลักสูตร", text="หลักสูตร")),
-                                QuickReplyButton(action=MessageAction(
                                     label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
         print("no req is found , let the user choose again")
     else:
