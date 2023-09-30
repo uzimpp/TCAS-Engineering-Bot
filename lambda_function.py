@@ -365,16 +365,28 @@ def check_req(event):
     if req_list[0] == '':# delete '' from the list
         req_list = req_list[1:] # most of the time there is '' in the first value of the list which possibly causes errors
     req_list = [re.sub(r"(รอบ)(\d)", rf"รอบที่ \2 ", element.replace("\n", "คือ\nรอบ ", 1)) for element in req_list]
-    if req_list == ['']:
+    if req_list == []:
         stage = 7
-        line_bot_api.push_message(
-            event.source.user_id,
-            TextSendMessage("ขออภัย ไม่พบข้อมูลการเปิดรับสมัครในหลักสูตรดังกล่าว\nหากคุณต้องการทราบข้อมูลให้คุณเลือกข้อมูลที่ต้องการทราบใหม่ได้เลย",
-                            quick_reply=QuickReply(items=[
-                                QuickReplyButton(action=MessageAction(
-                                    label="สาขา", text="สาขา")),
-                                QuickReplyButton(action=MessageAction(
-                                    label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
+        if len(curriculum_list) == 1:
+            line_bot_api.push_message(
+                event.source.user_id,
+                TextSendMessage("ขออภัย ไม่พบข้อมูลการเปิดรับสมัครในหลักสูตรดังกล่าว\nหากคุณต้องการทราบข้อมูลให้คุณเลือกข้อมูลที่ต้องการทราบใหม่ได้เลย",
+                                quick_reply=QuickReply(items=[
+                                    QuickReplyButton(action=MessageAction(
+                                        label="สาขา", text="สาขา")),
+                                    QuickReplyButton(action=MessageAction(
+                                        label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
+        else:
+            line_bot_api.push_message(
+                event.source.user_id,
+                TextSendMessage("ขออภัย ไม่พบข้อมูลการเปิดรับสมัครในหลักสูตรดังกล่าว\nหากคุณต้องการทราบข้อมูลให้คุณเลือกข้อมูลที่ต้องการทราบใหม่ได้เลย",
+                                quick_reply=QuickReply(items=[
+                                    QuickReplyButton(action=MessageAction(
+                                        label="สาขา", text="สาขา")),
+                                    QuickReplyButton(action=MessageAction(
+                                        label="หลักสูตร", text="หลักสูตร")),
+                                    QuickReplyButton(action=MessageAction(
+                                        label="ไม่ต้องการ", text="ไม่ต้องการ"))
         print("no req is found , let the user choose again")
     else:
         stage = 6
