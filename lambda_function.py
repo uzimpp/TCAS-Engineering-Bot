@@ -109,7 +109,7 @@ def handle_message(event):
                 TextSendMessage(reporting_form))
         
         ############################################################################
-        # the other | อื่นๆ //
+        # other | อื่นๆ //
         elif event.message.text == 'อื่นๆ':  ###########
             print("other")
             line_bot_api.push_message(
