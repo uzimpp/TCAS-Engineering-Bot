@@ -123,6 +123,19 @@ def handle_message(event):
             activated = True
             user_confirm = False
             stage = 0
+            selected_uni = ''
+            worksheet = ''
+            data = []
+            major_list = []
+            selected_major = ''
+            curriculum_list = []
+            selected_curriculum = ''
+            req_list = []
+            req_list_row = []
+            selected_round = ''
+            skipped = 0
+            user_errors = 0
+            input_value = 0
             
             reset_variables()
             print("activated Chatbot")            
@@ -168,7 +181,7 @@ def handle_message(event):
         ######################################
         # user warning | เตือนผู้ใช้งานเมื่อมีการพิมพ์ผิดอย่างต่อเนื่องทุกๆ 5 ครั้ง
         else:
-            if not(activated and user_confirm) :
+            if not(activated and user_confirm) and stage <= 0:
                 user_errors += 1
                 print('user_errors',user_errors)
             pass
@@ -191,13 +204,13 @@ def handle_message(event):
         if (event.message.text.upper() in university and user_confirm and stage == 0) or (event.message.text == "สาขา" and stage == 7):
             if event.message.text != "สาขา" :
                 selected_uni = event.message.text.upper()
-            input_value = 0
             user_confirm = False
+            input_value = 0
             user_errors = 0
             stage = 1
             check_major(event)
 
-        elif (event.message.text not in university and stage == 0 and user_confirm) or (isinstance(event.message.text, gspread.exceptions.APIError) and stage == 0 and user_confirm):
+        elif ((event.message.text not in university) and (stage == 0 and user_confirm) and (stage not in range(1,8))):
             print("check major = error")
             line_bot_api.reply_message(
                 event.reply_token,
@@ -242,10 +255,12 @@ def handle_message(event):
 
         elif not(1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1 and len(curriculum_list) > 1:
             print("check req = error")
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    "ขออภัย กรุณาเลือกหลักสูตรที่คุณสนใจ\nด้วยการพิมพ์ตัวเลข 1 - " + str(len(curriculum_list)) + "โดยไม่ต้องมีจุด"))
+            line_bot_api.push_message(
+            event.source.user_id, TextSendMessage(
+                "ขออภัย กรุณาเลือกหลักสูตรข้างล่างนี้ด้วยการกดปุ่ม Quick reply\n" +
+                '\n'.join(curriculum_list),
+                quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
+                    label="หลักสูตรที่ "+ str(e+1), text=e+1)) for e in range(len(curriculum_list))])))
         
         ######################################
         # check round | ตรวจสอบรอบ
@@ -260,7 +275,7 @@ def handle_message(event):
             print("check round = error")
             line_bot_api.push_message(
             event.source.user_id,
-            TextSendMessage("ขออภัย กรุณาเลือกเกณฑ์การรับสมัครในรอบที่คุณสนใจ",
+            TextSendMessage("ขออภัย กรุณาเลือกเกณฑ์การรับสมัครในรอบที่คุณสนใจด้วยการกดปุ่ม Quick reply",
                             quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
                                 label="รอบ 1", text="1")),
                                 QuickReplyButton(action=MessageAction(
@@ -365,6 +380,7 @@ def check_req(event):
     if req_list[0] == '':# delete '' from the list
         req_list = req_list[1:] # most of the time there is '' in the first value of the list which possibly causes errors
     req_list = [re.sub(r"(รอบ)(\d)", rf"รอบที่ \2 ", element.replace("\n", "คือ\nรอบ ", 1)) for element in req_list]
+    print(req_list)
     if req_list == []:
         stage = 7
         if len(curriculum_list) == 1:
@@ -386,7 +402,7 @@ def check_req(event):
                                     QuickReplyButton(action=MessageAction(
                                         label="หลักสูตร", text="หลักสูตร")),
                                     QuickReplyButton(action=MessageAction(
-                                        label="ไม่ต้องการ", text="ไม่ต้องการ"))
+                                        label="ไม่ต้องการ", text="ไม่ต้องการ"))])))
         print("no req is found , let the user choose again")
     else:
         stage = 6
