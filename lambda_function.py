@@ -148,21 +148,21 @@ def handle_message(event):
                 
         ######################################
         # accept and deny | ยืนยันและปฏิเสธ
-        elif (event.message.text == "ยืนยัน" and activated) :
+        elif (event.message.text == "ยืนยัน" and activated) or (event.message.text == "มหาวิทยาลัย" and stage == 7):
             event.message.text = ""
             user_confirm = True
             stage = 0
-
             reset_variables()
             print("accepted")            
             line_bot_api.reply_message(
                 event.reply_token,
                 TextSendMessage(
                     "กรุณาพิมพ์มหาวิทยาลัยที่คุณต้องการทราบข้อมูล"))
-            line_bot_api.push_message(
-                event.source.user_id, images[1])
-            line_bot_api.push_message(
-                event.source.user_id, images[2])
+            if event.message.text == "ยืนยัน":
+                line_bot_api.push_message(
+                    event.source.user_id, images[1])
+                line_bot_api.push_message(
+                    event.source.user_id, images[2])
             
 
         elif (event.message.text == "ปฏิเสธ" or event.message.text == "ไม่ต้องการ") and (activated or stage == 4):
@@ -210,7 +210,7 @@ def handle_message(event):
             stage = 1
             check_major(event)
 
-        elif ((event.message.text not in university) and (stage == 0 and user_confirm) and (stage not in range(1,8))):
+        elif ((event.message.text not in university and event.message.text !="ยืนยัน") and stage == 0 and user_confirm and stage not in range(1,8)):
             print("check major = error")
             line_bot_api.reply_message(
                 event.reply_token,
@@ -235,7 +235,7 @@ def handle_message(event):
             check_curriculum(event)
         
         
-        elif not(1 <= input_value <= len(major_list)) and stage == 2 and stage != 7 and skipped != 1 and len(major_list) > 1:
+        elif not(1 <= input_value <= len(major_list)) and event.message.text != "หลักสูตร" and stage == 2 and stage != 7 and skipped != 1 and len(major_list) > 1:
             print("check curriculum = error")
             if len(major_list) in range(2,14):
                 line_bot_api.reply_message(
@@ -243,12 +243,12 @@ def handle_message(event):
                     TextSendMessage(
                         "ขออภัย กรุณาเลือกสาขาที่คุณสนใจด้านล่างนี้\n" +'\n'.join(major_list),
                     quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
-                        label="สาขาที่ "+str(i+1), text=i+1)) for i in range(len(major_list))])))
+                        label="สาขาที่ "+str(n+1), text=n+1)) for n in range(len(major_list))])))
             else:
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(
-                    "ขออภัย กรุณาเลือกสาขาที่คุณสนใจ\nด้วยการพิมพ์ตัวเลข 1 - " + str(len(major_list)) + "โดยไม่ต้องมีจุด
+                    "ขออภัย กรุณาเลือกสาขาที่คุณสนใจ\nด้วยการพิมพ์ตัวเลข 1 - " + str(len(major_list)) + "โดยไม่ต้องมีจุด"))
         
         ######################################
         # check req | ตรวจสอบเกณฑ์ในการรับสมัคร
@@ -261,12 +261,12 @@ def handle_message(event):
             check_req(event)
 
 
-        elif not(1 <= input_value <= len(curriculum_list)) and stage == 4 and skipped != 1 and len(curriculum_list) > 1:
+        elif not(1 <= input_value <= len(curriculum_list)) and event.message.text != "รอบ" and stage == 4 and skipped != 1 and len(curriculum_list) > 1:
             print("check req = error")
             line_bot_api.push_message(
-            event.source.user_id, TextSendMessage(
-                "ขออภัย กรุณาเลือกหลักสูตรข้างล่างนี้ด้วยการกดปุ่ม Quick reply\n" +
-                '\n'.join(curriculum_list),
+                event.source.user_id,
+                TextSendMessage(
+                    "ขออภัย กรุณาเลือกหลักสูตรข้างล่างนี้ด้วยการกดปุ่ม Quick reply\n" +'\n'.join(curriculum_list),
                 quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
                     label="หลักสูตรที่ "+ str(e+1), text=e+1)) for e in range(len(curriculum_list))])))
         
@@ -285,7 +285,7 @@ def handle_message(event):
             event.source.user_id,
             TextSendMessage("ขออภัย กรุณาเลือกเกณฑ์การรับสมัครในรอบที่คุณสนใจด้วยการกดปุ่ม Quick reply",
                             quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
-                                label="รอบ 1", text="1")),
+                                    label="รอบ 1", text="1")),
                                 QuickReplyButton(action=MessageAction(
                                     label="รอบ 2", text="2")),
                                 QuickReplyButton(action=MessageAction(
@@ -313,11 +313,15 @@ def check_major(event):
     global stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
     input_value = 0
     skipped = 0
-    worksheet = client.open('sn-all-engineer').worksheet(selected_uni)
-    data = worksheet.get_all_values()
-    major_list = [row[0] for row in data[1:] if row[0]]
-    major_list = sorted(
-        set(major_list), key=lambda x: int(x.split('.')[0]))  # เรียงลำดับตามเลขหน้าจากน้อยไปหามาก
+    if worksheet == '':
+        worksheet = client.open('sn-all-engineer').worksheet(selected_uni)
+        data = worksheet.get_all_values()
+        major_list = [row[0] for row in data[1:] if row[0]]
+        major_list = sorted(
+            set(major_list), key=lambda x: int(x.split('.')[0]))  # เรียงลำดับตามเลขหน้าจากน้อยไปหามาก
+    else:
+        pass
+
     if len(major_list) == 1:
         messages = "จาก " + selected_uni + " มีเพียง " + major_list[0]
         line_bot_api.reply_message(
@@ -331,10 +335,10 @@ def check_major(event):
         check_curriculum(event)
     elif len(major_list) in range(2,14):
         stage = 2
-        line_bot_api.push_message(
-            event.source.user_id, TextSendMessage(
-                "กรุณาเลือกสาขาด้านข้างล่างนี้\n" +
-                '\n'.join(major_list),
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(
+                "กรุณาเลือกสาขาด้านล่างนี้\n" +'\n'.join(major_list),
                 quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
                     label="สาขาที่ "+str(i+1), text=i+1)) for i in range(len(major_list))])))
     else:
@@ -350,7 +354,7 @@ def check_curriculum(event):
     input_value = 0
     skipped = 0
     # หา row ที่มี major นั้นๆเพื่อนำ row ดังกล่าวไปหาต่อใน column C แล้วเก็บ เป็น list ที่เป็น set เพื่อไม่ให้ซ้ำ
-    curriculum_list_row = [i+1 for i,
+    curriculum_list_row = [k+1 for k,
                            row in enumerate(data) if row[0] == selected_major]
     curriculum_list = [data[row-1][2]
                        for row in curriculum_list_row if row <= len(data)]
@@ -377,14 +381,14 @@ def check_curriculum(event):
                 "กรุณาเลือกหลักสูตรข้างล่างนี้\n" +
                 '\n'.join(curriculum_list),
                 quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
-                    label="หลักสูตรที่ "+str(i+1), text=i+1)) for i in range(len(curriculum_list))])))
+                    label="หลักสูตรที่ "+str(z+1), text=z+1)) for z in range(len(curriculum_list))])))
     print("check_curriculum",selected_major,"\n",curriculum_list)
 
 def check_req(event):
     global stage, activated, user_confirm, skipped, selected_uni, worksheet, data, major_list, selected_major, curriculum_list, selected_curriculum, req_list, req_list_row, selected_round
     input_value = 0
     skipped = 0
-    req_list_row = [i+1 for i,
+    req_list_row = [y+1 for y,
                     row in enumerate(data) if row[2] == selected_curriculum]
     req_list = [data[row - 1][4] for row in req_list_row]
     if len(req_list) == 6:
@@ -451,6 +455,8 @@ def check_round(event):
                 event.source.user_id,
                 TextSendMessage("คุณต้องการทราบข้อมูลส่วนใดใหม่หรือไม่?",
                                 quick_reply=QuickReply(items=[
+                                    QuickReplyButton(action=MessageAction(
+                                        label="มหาวิทยาลัย", text="มหาวิทยาลัย")),
                                     QuickReplyButton(action=MessageAction(
                                         label="สาขา", text="สาขา")),
                                     QuickReplyButton(action=MessageAction(
