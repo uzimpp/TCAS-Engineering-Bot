@@ -321,6 +321,14 @@ def check_major(event):
         skipped = 1
         print("skipped to check_curriculum", selected_major)
         check_curriculum(event)
+    elif len(major_list) in range(2,14):
+        stage = 2
+        line_bot_api.push_message(
+            event.source.user_id, TextSendMessage(
+                "กรุณาเลือกสาขาด้านข้างล่างนี้\n" +
+                '\n'.join(major_list),
+                quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
+                    label="สาขาที่ "+str(i+1), text=i+1)) for i in range(len(major_list))])))
     else:
         stage = 2
         line_bot_api.reply_message(
