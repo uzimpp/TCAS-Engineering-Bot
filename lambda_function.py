@@ -237,10 +237,18 @@ def handle_message(event):
         
         elif not(1 <= input_value <= len(major_list)) and stage == 2 and stage != 7 and skipped != 1 and len(major_list) > 1:
             print("check curriculum = error")
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(
-                    "ขออภัย กรุณาเลือกสาขาที่คุณสนใจ\nด้วยการพิมพ์ตัวเลข 1 - " + str(len(major_list)) + "โดยไม่ต้องมีจุด"))
+            if len(major_list) in range(2,14):
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(
+                        "ขออภัย กรุณาเลือกสาขาที่คุณสนใจด้านล่างนี้\n" +'\n'.join(major_list),
+                    quick_reply=QuickReply(items=[QuickReplyButton(action=MessageAction(
+                        label="สาขาที่ "+str(i+1), text=i+1)) for i in range(len(major_list))])))
+            else:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(
+                    "ขออภัย กรุณาเลือกสาขาที่คุณสนใจ\nด้วยการพิมพ์ตัวเลข 1 - " + str(len(major_list)) + "โดยไม่ต้องมีจุด
         
         ######################################
         # check req | ตรวจสอบเกณฑ์ในการรับสมัคร
