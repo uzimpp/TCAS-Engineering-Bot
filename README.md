@@ -7,8 +7,7 @@ Any further reponse such as reponding to more than one major need a huge code mo
 with this ID Line : @334vkcsr or Scan this QR code!
 ![image](https://github.com/uzimpp/TCAS-Engineering-Bot/assets/130132510/2827871b-b7dc-4906-ae78-73cf9f3d89d8)
 
-- Academic report
-![file](https://github.com/uzimpp/TCAS-Engineering-Bot/blob/main/Academic%20report.pdf)
+- ![Academic report](https://github.com/uzimpp/TCAS-Engineering-Bot/blob/main/Academic%20report.pdf)
   
 # To do
 - [ ] TCAS Website scraping & website create a data base
