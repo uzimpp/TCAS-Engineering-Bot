@@ -1,4 +1,4 @@
-# To test the code. Basically, run the programm by include these codes and use ngrok to connect a webhook with LINE Official Account
+# To test the code. Basically, run the programm by including these codes and use ngrok to connect a webhook with LINE Official Account
 from pyngrok import ngrok
 from flask import Flask, request, abort
 
